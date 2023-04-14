@@ -12,18 +12,25 @@ function parseRegex(regex) {
         if (char === '.') {
             tokens.push({ type: 'any' }); // - If the character is a dot (.), we push a token object with a type of any.
         } else if (char === '*') {
-            tokens.push({ type: 'zeroOrMore' }); // - If the character is an asterisk (*), we push a token object with a type of zeroOrMore.
+            tokens.push({ type: 'zeroOrMore' }); // - If the character is an asterisk (*),
+            // we push a token object with a type of zeroOrMore.
         } else if (char === '+') {
-            tokens.push({ type: 'oneOrMore' }); // - If the character is a plus (+), we push a token object with a type of oneOrMore.
+            tokens.push({ type: 'oneOrMore' }); // - If the character is a plus (+),
+            // we push a token object with a type of oneOrMore.
         } else if (char === '?') {
-            tokens.push({ type: 'zeroOrOne' }); // - If the character is a question mark (?), we push a token object with a type of zeroOrOne.
+            tokens.push({ type: 'zeroOrOne' }); // - If the character is a question mark (?),
+            // we push a token object with a type of zeroOrOne.
         } else if (char === '(') {
-            tokens.push({ type: 'groupStart' });
+            tokens.push({ type: 'groupStart' }); // - If the character is an opening parenthesis ((),
+            // we push a token object with a type of groupStart.
         } else if (char === ')') {
-            tokens.push({ type: 'groupEnd' });
+            tokens.push({ type: 'groupEnd' }); // - If the character is a closing parenthesis ()),
+            // we push a token object with a type of groupEnd.
         } else if (char === '\\') {
-            const nextChar = regex[index + 1];
-
+            const nextChar = regex[index + 1]; // - If the character is a backslash (\), we look ahead to the next character
+            // to determine the type of token to push (digit, word, whitespace, or literal).
+            // - If none of the above conditions are met, we push a token object with a type of literal
+            // and a value equal to the character.
             if (nextChar === 'd') {
                 tokens.push({ type: 'digit' });
                 index++;
