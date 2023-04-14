@@ -1,4 +1,8 @@
 function parseRegex(regex) {
+    //In this example, we define a parseRegex function that takes a regular expression
+    // as an argument and returns an array of tokens.
+    // We loop through each character in the regular expression string and push a
+    // token object to the tokens array based on the character:
     const tokens = [];
     let index = 0;
 
@@ -6,13 +10,13 @@ function parseRegex(regex) {
         const char = regex[index];
 
         if (char === '.') {
-            tokens.push({ type: 'any' });
+            tokens.push({ type: 'any' }); // - If the character is a dot (.), we push a token object with a type of any.
         } else if (char === '*') {
-            tokens.push({ type: 'zeroOrMore' });
+            tokens.push({ type: 'zeroOrMore' }); // - If the character is an asterisk (*), we push a token object with a type of zeroOrMore.
         } else if (char === '+') {
-            tokens.push({ type: 'oneOrMore' });
+            tokens.push({ type: 'oneOrMore' }); // - If the character is a plus (+), we push a token object with a type of oneOrMore.
         } else if (char === '?') {
-            tokens.push({ type: 'zeroOrOne' });
+            tokens.push({ type: 'zeroOrOne' }); // - If the character is a question mark (?), we push a token object with a type of zeroOrOne.
         } else if (char === '(') {
             tokens.push({ type: 'groupStart' });
         } else if (char === ')') {
