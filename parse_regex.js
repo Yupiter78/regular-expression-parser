@@ -53,3 +53,9 @@ function parseRegex(regex) {
 
     return tokens;
 }
+
+const regex = "a(b|c)*";
+
+const ast = parseRegex(regex);
+
+console.log(ast);
