@@ -57,7 +57,8 @@ function parseRegex(regex) {
         let result = null;
         let subRegexp = null;
         if (currentChar !== '(' && currentChar !== ')' && currentChar !== '*' && currentChar !== '|') {
-            subRegexp = parseRegex(regex.slice(index));
+            subRegexp = parseRegex(regex.slice(index, regex.indexOf(')', index)));
+            console.log("subRegexp_parseZero:", subRegexp);
             if (subRegexp !== null) {
                 result = new ZeroOrMore(subRegexp);
             }
@@ -66,14 +67,15 @@ function parseRegex(regex) {
     }
 
     function parseOr() {
+        console.log("________parseOr____________")
         let result = null;
         let left = null;
         let right = null;
-        left = parseStr();
+        left = regex[index - 1];
         if (left !== null && currentChar === '|') {
             index++;
             currentChar = regex[index];
-            right = parseStr();
+            right = currentChar;
             if (right !== null) {
                 result = new Or(left, right);
             }
@@ -82,23 +84,31 @@ function parseRegex(regex) {
     }
 
     function parseStr() {
-        console.log("parseStr");
+        console.log("parseStr_START");
         let result = null;
         let regexpList = [];
         let subRegexp = null;
-        console.log("currentChar_parseStr:", currentChar);
-        while (currentChar !== null && currentChar !== ')' && currentChar !== '|' && currentChar !== '*') {
+        console.log("currentChar_parseStr_before_while_loop:", currentChar);
+        console.log("currentChar !== null && currentChar !== ')' && currentChar !== '|' && currentChar !== '*':",
+            currentChar !== null && currentChar !== ')' && currentChar !== '*');
+        while (currentChar !== null && currentChar !== ')' && currentChar !== '*') {
+            console.log("WHILE_START");
             if (currentChar === '(') {
                 index++;
                 currentChar = regex[index];
                 console.log("currentChar_parseStr_3:", currentChar);
-                subRegexp = parseRegex(regex.slice(index));
+                console.log("regex.slice(index, regex.indexOf(')', index)):", regex.slice(index, regex.indexOf(')', index)));
+                subRegexp = parseRegex(regex.slice(index, regex.indexOf(')', index)));
+                console.log("subRegexp:", subRegexp);
                 if (subRegexp !== null) {
                     regexpList.push(subRegexp);
                     currentChar = regex[index];
                 } else {
                     return null;
                 }
+            } else if (currentChar === '|') {
+                subRegexp  = parseOr();
+                console.log("subRegexp:", subRegexp);
             } else {
                 subRegexp = parseNormal() || parseAny();
                 if (subRegexp !== null) {
@@ -113,11 +123,13 @@ function parseRegex(regex) {
         }
         if (regexpList.length > 0) {
             result = new Str(regexpList);
+            console.log("result_regexList:", result);
         }
         return result;
     }
 
     let result = parseStr();
+    console.log("result_END:", result);
     if (result === null || currentChar !== null) {
         return null;
     }
