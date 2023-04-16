@@ -1,3 +1,38 @@
+class Normal {
+    constructor(char) {
+        this.type = 'normal';
+        this.char = char;
+    }
+}
+
+class Any {
+    constructor() {
+        this.type = 'any';
+    }
+}
+
+class ZeroOrMore {
+    constructor(regexp) {
+        this.type = 'zeroOrMore';
+        this.regexp = regexp;
+    }
+}
+
+class Or {
+    constructor(left, right) {
+        this.type = 'or';
+        this.left = left;
+        this.right = right;
+    }
+}
+
+class Str {
+    constructor(regexpList) {
+        this.type = 'str';
+        this.regexpList = regexpList;
+    }
+}
+
 function parseRegex(str) {
     let regexpList = [];
 
@@ -15,7 +50,7 @@ function parseRegex(str) {
         } else if (str[0] === '|') {
             let left = regexpList.pop();
             let right = parseRegex(str.slice(1));
-            regexpList.push({type: 'or', left, right});
+            regexpList.push(new Or(left, right));
             break;
         } else if (str[0] === '*') {
             let prevRegExp = regexpList.pop();
@@ -23,34 +58,28 @@ function parseRegex(str) {
             str = str.slice(1);
         } else if (str[0] === '+') {
             let prevRegExp = regexpList.pop();
-            let oneOrMoreRegExp = {type: 'oneOrMore', regexp: prevRegExp};
+            let oneOrMoreRegExp = new Str([prevRegExp, new ZeroOrMore(prevRegExp)]);
             regexpList.push(oneOrMoreRegExp);
             str = str.slice(1);
         } else if (str[0] === '?') {
             let prevRegExp = regexpList.pop();
-            let zeroOrOneRegExp = {type: 'zeroOrOne', regexp: prevRegExp};
+            let zeroOrOneRegExp = new Or(prevRegExp, new Normal(''));
             regexpList.push(zeroOrOneRegExp);
             str = str.slice(1);
         } else if (str[0] === '.') {
-            regexpList.push({type: 'any'});
+            regexpList.push(new Any());
             str = str.slice(1);
         } else {
             let sequence = parseSequence(str);
-            let normalObjects = sequence.split('').map(char => {
-                return {
-                    type: 'normal',
-                    char: char,
-                };
-            });
+            let normalObjects = sequence.split('').map(char => new Normal(char));
             regexpList.push(...normalObjects);
             str = str.slice(sequence.length);
         }
     }
-
     if (regexpList.length === 1) {
         return regexpList[0];
     } else {
-        return {type: 'str', regexpList};
+        return new Str(regexpList);
     }
 }
 
@@ -60,10 +89,10 @@ function setLastObjectToZeroOrMore(prevRegExp, regexpList) {
         if (lastObject.type === 'zeroOrMore') {
             lastObject.regexp = prevRegExp;
         } else {
-            regexpList.push({type: 'zeroOrMore', regexp: prevRegExp});
+            regexpList.push(new ZeroOrMore(prevRegExp));
         }
     } else {
-        regexpList.push({type: 'zeroOrMore', regexp: prevRegExp});
+        regexpList.push(new ZeroOrMore(prevRegExp));
     }
 }
 
@@ -91,6 +120,7 @@ function parseBracketExpression(str) {
             str = str.slice(1);
         }
     }
+
     return {
         type: 'charSet',
         charSet: charSet,
@@ -132,17 +162,8 @@ function findMatchingClosingBracketIndex(str, startIndex = 0) {
     throw new Error('No matching closing bracket found');
 }
 
-console.log(parseRegex('abc'),
-    "should return {type: 'str', regexpList: [{type: 'normal', char: 'a'} , {type: 'normal', char: 'b'}, {type: 'normal', char: 'c'}]}"); // Str {regexpList: [Normal, Normal, Normal]}
-console.log(parseRegex('a*b'),
-    "should return {type: 'str', regexpList: [{type: 'zeroOrMore', regexp: {type: 'normal', char: 'a'}}, {type: 'normal', char: 'b'}]}"); // Str {regexpList: [ZeroOrMore {regexp: Any}, Normal {char: 'b'},]}
-console.log(parseRegex('a|b'),
-    "should return {type: 'or', left: {type: 'normal', char: 'a'}, right: {type: 'normal', char: 'b'}}"); // Or {left: Normal {char: "a"}, right: Normal {char: "b"}}
-console.log(parseRegex('a|bc*'),
-    "should return {type: 'or', left: {type: 'normal', char: 'a'}, right: {type: 'str', regexpList: [{type: 'normal', char: 'b'}, {type: 'zeroOrMore', regexp: {type: 'normal', char: 'c'}}]}}"); // Or { left: Normal {char: "a"},
-// right: Str {regexpList: [Normal {char: "b"}, ZeroOrMore {regexp: Any}]}}
-
-console.log(parseRegex("a(b|c)*"),
-    "should return {type: 'str', regexpList: [{type: 'normal', char: 'a'}, {type: 'zeroOrMore', regexp: {type: 'or', left: {type: 'normal', char: 'b'}, right: {type: 'normal', char: 'c'}}}]}"); // Str {regexpList: [Normal {char: "a"}, Str {regexpList: [Or {left: Normal {char: "b"},
-// right: Normal {char: "c"}}, ZeroOrMore {regexp: Any}]}]}
-console.log(parseRegex("(a|b)*"));
+console.log(parseRegex('abc'), "should return Str {regexpList: [Normal, Normal, Normal]}");
+console.log(parseRegex('a*b'), "should return Str {regexpList: [ZeroOrMore {regexp: Normal}, Normal]}");
+console.log(parseRegex('a|b'), "should return Or {left: Normal {char: 'a'}, right: Normal {char: 'b'}}");
+console.log(parseRegex('a|bc*'), "should return Or {left: Normal {char: 'a'}, right: Str {regexpList: [Normal, ZeroOrMore {regexp: Normal}]}}");
+console.log(parseRegex("a(b|c)*"), "should return Str {regexpList: [Normal, ZeroOrMore {regexp: Or}]}");
