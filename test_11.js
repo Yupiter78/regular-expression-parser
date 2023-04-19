@@ -64,6 +64,7 @@ function parseRegex(str) {
         } else {
             let sequence = parseSequence(str);
             let normalObjects = sequence.split('').map(char => new Normal(char));
+            console.log("normalObjects:", normalObjects);
             regexpList.push(...normalObjects);
             str = str.slice(sequence.length);
         }
@@ -163,3 +164,4 @@ console.log(parseRegex('a|bc*'),
     "should return Or {left: Normal {char: 'a'}, right: Str {regexpList: [Normal {char: 'b'}, ZeroOrMore {regexp: Normal {char: 'c'}}]}}");
 console.log(parseRegex("a(b|c)*"),
     "should return Str {regexpList: [Normal {char: 'a'}, ZeroOrMore {regexp: Or {left: Normal {char: 'b'}, right: Normal {char: 'c'}}}]}");
+console.log(parseRegex("(ab)*"));
