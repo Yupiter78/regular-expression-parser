@@ -1,136 +1,94 @@
 const Normal = char => ({ type: "Normal", char });
+
 const Any = () => ({ type: "Any" });
+
 const ZeroOrMore = regexp => ({ type: "ZeroOrMore", regexp });
 
 const Or = (left, right) => ({ type: "Or", left, right });
 
 const Str = regexpList => ({ type: "Str", regexpList });
 
-const parseRegExp = str => {
-    console.log("typeof str", typeof str);
-    console.log("str:", str);
-    if (!str) return null;
 
-    const parse = (remaining, stack = []) => {
-        console.log("------------START------------");
-        console.log("remaining_before_isInvalidSyntax:", remaining);
-        console.log("typeof remaining_before_isInvalidSyntax:", typeof remaining);
-        console.log("stack_Parse:", stack);
-        console.log("stack[0]:", stack[0]);
-        console.log("stack[0].type:", stack[0]?.type);
+// Define parsing helper functions
 
-        if (isInvalidSyntax(remaining)) return null;
-        console.log("____remaining_After_____:", remaining);
+const isSpecialCharacter = char => "()|*.".includes(char);
 
-        if (!remaining) return stack[0];
-
-        switch (remaining[0]) {
-            case "(":
-                const endIndex = findMatchingClosingParenIndex(remaining);
-                const innerStr = remaining.slice(1, endIndex);
-                const regexp = parse(innerStr);
-                if (!regexp) return null;
-                return parse(remaining.slice(endIndex + 1), [...stack, regexp]);
-
-            case "|":
-                console.log("||||||||||||||");
-                if (isInvalidSyntax(stack)) return null;
-                const left = stack.pop();
-                console.log("left:", left);
-                console.log(`_____${remaining}_Or.slice(1):`, remaining.slice(1));
-
-                const right = parse(remaining.slice(1));
-                console.log("right:", right);
-                if (!right) return null;
-                console.log("stack_Or:", stack);
-                return parse("", [...stack, Or(left, right)]);
-
-            case "*":
-                if (isInvalidSyntax(stack)) return null;
-                const prevRegExp = stack.pop();
-                const modifiedRegExp = ZeroOrMore(prevRegExp);
-                return parse(remaining.slice(1), [...stack, modifiedRegExp]);
-
-            case ".":
-                return parse(remaining.slice(1), [...stack, Any()]);
-
-            default:
-                const sequence = parseSequence(remaining);
-                console.log("sequence_Parse:", sequence);
-                console.log(`sequence_____${remaining}.slice(${sequence.length}):`, remaining.slice(sequence.length));
-
-                const normalObjects = sequence.split("").map(Normal);
-
-                return parse(remaining.slice(sequence.length), [...stack, ...normalObjects]);
-        }
-    };
-
-    return parse(str);
-};
-
-const isSpecialCharacter = char => "()|*.".indexOf(char) !== -1;
-
-const isInvalidSyntax = stack => {
-    console.log("1_stack.length_isInvalidSyntax:", stack.length);
-    console.log("2_stack_isInvalidSyntax:", stack);
-    console.log("3_stack[0]_isInvalidSyntax:", stack[0]);
-    console.log(`4_____${stack.length} === 0 || ${stack[0]?.type} === "Or"`, stack.length === 0 || stack[0].type === "Or");
-    return stack.length === 0 || stack[0].type === "Or";
-}
+const isInvalidSyntax = stack => stack.length === 0 || stack[stack.length - 1].type === "Or";
 
 const parseSequence = str => {
     let endIndex = 0;
-    while (endIndex < str.length && !isSpecialCharacter(str[endIndex])) {
+    while (endIndex < str.length && !isSpecialCharacter(str.charAt(endIndex))) {
         endIndex++;
     }
     return str.slice(0, endIndex);
 };
 
-/*const parseSequence = str => {
-    let result = '';
-    let i = 0;
-
-    while (i < str.length && !isSpecialChar(str[i])) {
-        result += str[i];
+const findMatchingClosingParenIndex = (str, startIndex = 0) => {
+    let openCount = 1;
+    let i = startIndex + 1;
+    while (i < str.length && openCount !== 0) {
+        if (str.charAt(i) === "(") {
+            openCount++;
+        } else if (str.charAt(i) === ")") {
+            openCount--;
+        }
         i++;
     }
-
-    return result;
+    return openCount === 0 ? i - 1 : null;
 };
 
-const isSpecialChar = char => {
-    switch (char) {
-        case '(':
-        case ')':
-        case '|':
-        case '*':
-        case '.':
-            return true;
-        default:
-            return false;
-    }
-};*/
-
-/*const parseSequence = str => {
-    const match = str.match(/^[^()|*.]+/);
-    return match ? match[0] : '';
-};*/
-const findMatchingClosingParenIndex = (str, startIndex = 0) => {
-    let count = 1;
-    for (let i = startIndex + 1; i < str.length; i++) {
-        if (str[i] === "(") {
-            count++;
-        } else if (str[i] === ")") {
-            count--;
-            if (count === 0) {
-                return i;
-            }
+const parseRegExp = str => {
+    const parseRecursive = (stack, i) => {
+        if (i >= str.length) {
+            return stack;
         }
-    }
-    return null;
+        const char = str.charAt(i);
+
+        if (char === "(") {
+            const endIndex = findMatchingClosingParenIndex(str, i);
+            if (endIndex === null) {
+                return null; // invalid syntax
+            }
+            const subexpression = parseRecursive([], i + 1);
+            if (subexpression === null) {
+                return null; // subexpression is invalid
+            }
+            return parseRecursive([...stack, subexpression], endIndex + 1);
+        } else if (char === "|") {
+            if (isInvalidSyntax(stack)) {
+                return null;
+            }
+            const left = stack.pop();
+            const rightSequence = parseSequence(str.slice(i + 1));
+            const right = parseRegExp(rightSequence);
+            if (right === null || isInvalidSyntax([left, right])) {
+                return null;
+            }
+            return parseRecursive([...stack, Str([left, Or(left, right)])], i + rightSequence.length + 1);
+        } else if (char === "*") {
+            if (isInvalidSyntax(stack)) {
+                return null;
+            }
+            const prev = stack.pop();
+            return parseRecursive([...stack, ZeroOrMore(prev)], i + 1);
+        } else if (char === ".") {
+            return parseRecursive([...stack, Any()], i + 1);
+        } else {
+            const sequence = parseSequence(str.slice(i));
+            if (sequence.length === 0) {
+                return null; // no valid sequence found
+            }
+            const regexpList = Array.from(sequence).map(char => Normal(char));
+            return parseRecursive([...stack, Str(regexpList)], i + sequence.length);
+        }
+    };
+
+    const resultStack = parseRecursive([], 0);
+    return resultStack !== null && resultStack.length === 1 ? resultStack[0] : null;
 };
 
-// console.log(parseRegExp("LL2::L|nX'=_T*X460$.A)Q %i3or,(s~rOr+)nGsP2R"));
-// console.log(parseRegExp('*+\"6O_.*$~&\\'));
-
-console.log(parseRegExp("a"))
+console.log(parseRegExp("a|b")); // {type: "Or", left: {type: "Normal", char: "a"}, right: {type: "Normal", char: "b"}}
+console.log(parseRegExp("(a)b|c")); // {type: "Or", left: {type: "Str", regexpList: [{type: "Normal", char: "a"}, {type: "Normal", char: "b"}]} , right: {type: "Normal", char: "c"}}
+console.log(parseRegExp("a*")); // {type: "ZeroOrMore", regexp: {type: "Normal", char: "a"}}
+console.log(parseRegExp(".")); // {type: "Any"}
+console.log(parseRegExp("")); // null
