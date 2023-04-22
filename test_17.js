@@ -8,7 +8,17 @@ const isInvalidSyntax = (stack) => {
     return stack.length === 0 || stack[stack.length - 1].type === "Or";
 }
 
+
 const parseSequence = (str) => {
+    let sequence = "";
+    let i = 0;
+    while (i < str.length && !isSpecialCharacter(str[i]) && str[i] !== ".") {
+        sequence += str[i];
+        i++;
+    }
+    return sequence;
+}
+/*const parseSequence = (str) => {
     let sequence = "";
     let i = 0;
     while (i < str.length && !isSpecialCharacter(str[i])) {
@@ -16,7 +26,7 @@ const parseSequence = (str) => {
         i++;
     }
     return sequence || null;
-}
+}*/
 /*const parseSequence = (str) => {
     let sequence = "";
     let i = 0;

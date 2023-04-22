@@ -1,11 +1,11 @@
-function parseRegex(str) {
+function parseRegExp(str) {
     let regexpList = [];
 
     while (str.length > 0) {
         if (str[0] === '(') {
             let endIndex = findMatchingClosingParenIndex(str);
             let innerStr = str.slice(1, endIndex);
-            regexpList.push(parseRegex(innerStr));
+            regexpList.push(parseRegExp(innerStr));
             str = str.slice(endIndex + 1);
         } else if (str[0] === '[') {
             let endIndex = findMatchingClosingBracketIndex(str);
@@ -14,7 +14,7 @@ function parseRegex(str) {
             str = str.slice(endIndex + 1);
         } else if (str[0] === '|') {
             let left = regexpList.pop();
-            let right = parseRegex(str.slice(1));
+            let right = parseRegExp(str.slice(1));
             regexpList.push({type: 'or', left, right});
             break;
         } else if (str[0] === '*') {
@@ -132,17 +132,8 @@ function findMatchingClosingBracketIndex(str, startIndex = 0) {
     throw new Error('No matching closing bracket found');
 }
 
-console.log(parseRegex('abc'),
-    "should return {type: 'str', regexpList: [{type: 'normal', char: 'a'} , {type: 'normal', char: 'b'}, {type: 'normal', char: 'c'}]}"); // Str {regexpList: [Normal, Normal, Normal]}
-console.log(parseRegex('a*b'),
-    "should return {type: 'str', regexpList: [{type: 'zeroOrMore', regexp: {type: 'normal', char: 'a'}}, {type: 'normal', char: 'b'}]}"); // Str {regexpList: [ZeroOrMore {regexp: Any}, Normal {char: 'b'},]}
-console.log(parseRegex('a|b'),
-    "should return {type: 'or', left: {type: 'normal', char: 'a'}, right: {type: 'normal', char: 'b'}}"); // Or {left: Normal {char: "a"}, right: Normal {char: "b"}}
-console.log(parseRegex('a|bc*'),
-    "should return {type: 'or', left: {type: 'normal', char: 'a'}, right: {type: 'str', regexpList: [{type: 'normal', char: 'b'}, {type: 'zeroOrMore', regexp: {type: 'normal', char: 'c'}}]}}"); // Or { left: Normal {char: "a"},
-// right: Str {regexpList: [Normal {char: "b"}, ZeroOrMore {regexp: Any}]}}
-
-console.log(parseRegex("a(b|c)*"),
-    "should return {type: 'str', regexpList: [{type: 'normal', char: 'a'}, {type: 'zeroOrMore', regexp: {type: 'or', left: {type: 'normal', char: 'b'}, right: {type: 'normal', char: 'c'}}}]}"); // Str {regexpList: [Normal {char: "a"}, Str {regexpList: [Or {left: Normal {char: "b"},
-// right: Normal {char: "c"}}, ZeroOrMore {regexp: Any}]}]}
-console.log(parseRegex("(a|b)*"));
+console.log(parseRegExp("a|b")); // {type: "Or", left: {type: "Normal", char: "a"}, right: {type: "Normal", char: "b"}}
+console.log(parseRegExp("(a)b|c")); // {type: "Or", left: {type: "Str", regexpList: [{type: "Normal", char: "a"}, {type: "Normal", char: "b"}]} , right: {type: "Normal", char: "c"}}
+console.log(parseRegExp("a*")); // {type: "ZeroOrMore", regexp: {type: "Normal", char: "a"}}
+console.log(parseRegExp(".")); // {type: "Any"}
+console.log(parseRegExp("")); // null

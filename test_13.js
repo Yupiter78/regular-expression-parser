@@ -164,3 +164,9 @@ if (re instanceof Str) {
     }
     console.log(match); // should output true
 }
+
+console.log(parseRegExp("a|b")); // {type: "Or", left: {type: "Normal", char: "a"}, right: {type: "Normal", char: "b"}}
+console.log(parseRegExp("(a)b|c")); // {type: "Or", left: {type: "Str", regexpList: [{type: "Normal", char: "a"}, {type: "Normal", char: "b"}]} , right: {type: "Normal", char: "c"}}
+console.log(parseRegExp("a*")); // {type: "ZeroOrMore", regexp: {type: "Normal", char: "a"}}
+console.log(parseRegExp(".")); // {type: "Any"}
+console.log(parseRegExp("")); // null

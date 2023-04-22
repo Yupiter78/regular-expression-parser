@@ -137,11 +137,8 @@ const findMatchingClosingParenIndex = (str, startIndex = 0) => {
     return null;
 };
 
-console.log(parseRegExp("LL2::L|nX'=_T*X460$.A)Q %i3or,(s~rOr+)nGsP2R"));
-console.log(parseRegExp('*+\"6O_.*$~&\\'));
-console.log(parseRegExp("(d.((.|(p*.|(g*|.)))|q.*)*|v)*"));
-console.log(parseRegExp('abc')); // Str {regexpList: [Normal {char: 'a'} , Normal {char: 'b'}, Normal {char: 'c'}]}
-console.log(parseRegExp('a*b')); // Str {regexpList: [ZeroOrMore {regexp: Any}, Normal {char: 'b'},]}
-console.log(parseRegExp('a|b')); // Or {left: Normal {char: "a"}, right: Normal {char: "b"}}
-console.log(parseRegExp('a|bc*')); // Or { left: Normal {char: "a"},
-// right: Str {regexpList: [Normal {char: "b"}, ZeroOrMore {regexp: Any}]}}
+console.log(parseRegExp("a|b")); // {type: "Or", left: {type: "Normal", char: "a"}, right: {type: "Normal", char: "b"}}
+console.log(parseRegExp("(a)b|c")); // {type: "Or", left: {type: "Str", regexpList: [{type: "Normal", char: "a"}, {type: "Normal", char: "b"}]} , right: {type: "Normal", char: "c"}}
+console.log(parseRegExp("a*")); // {type: "ZeroOrMore", regexp: {type: "Normal", char: "a"}}
+console.log(parseRegExp(".")); // {type: "Any"}
+console.log(parseRegExp("")); // null

@@ -33,14 +33,14 @@ class Str {
     }
 }
 
-function parseRegex(str) {
+function parseRegExp(str) {
     let regexpList = [];
 
     while (str.length > 0) {
         if (str[0] === '(') {
             let endIndex = findMatchingClosingParenIndex(str);
             let innerStr = str.slice(1, endIndex);
-            regexpList.push(parseRegex(innerStr));
+            regexpList.push(parseRegExp(innerStr));
             str = str.slice(endIndex + 1);
         } else if (str[0] === '[') {
             let endIndex = findMatchingClosingBracketIndex(str);
@@ -49,7 +49,7 @@ function parseRegex(str) {
             str = str.slice(endIndex + 1);
         } else if (str[0] === '|') {
             let left = regexpList.pop();
-            let right = parseRegex(str.slice(1));
+            let right = parseRegExp(str.slice(1));
             regexpList.push(new Or(left, right));
             break;
         } else if (str[0] === '*') {
@@ -162,8 +162,8 @@ function findMatchingClosingBracketIndex(str, startIndex = 0) {
     throw new Error('No matching closing bracket found');
 }
 
-console.log(parseRegex('abc'), "should return Str {regexpList: [Normal, Normal, Normal]}");
-console.log(parseRegex('a*b'), "should return Str {regexpList: [ZeroOrMore {regexp: Normal}, Normal]}");
-console.log(parseRegex('a|b'), "should return Or {left: Normal {char: 'a'}, right: Normal {char: 'b'}}");
-console.log(parseRegex('a|bc*'), "should return Or {left: Normal {char: 'a'}, right: Str {regexpList: [Normal, ZeroOrMore {regexp: Normal}]}}");
-console.log(parseRegex("a(b|c)*"), "should return Str {regexpList: [Normal, ZeroOrMore {regexp: Or}]}");
+console.log(parseRegExp("a|b")); // {type: "Or", left: {type: "Normal", char: "a"}, right: {type: "Normal", char: "b"}}
+console.log(parseRegExp("(a)b|c")); // {type: "Or", left: {type: "Str", regexpList: [{type: "Normal", char: "a"}, {type: "Normal", char: "b"}]} , right: {type: "Normal", char: "c"}}
+console.log(parseRegExp("a*")); // {type: "ZeroOrMore", regexp: {type: "Normal", char: "a"}}
+console.log(parseRegExp(".")); // {type: "Any"}
+console.log(parseRegExp("")); // null
