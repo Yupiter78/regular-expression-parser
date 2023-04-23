@@ -1,30 +1,73 @@
-const SPECIAL_CHARS = "()|*.";
-const OR_CHAR = "|";
+class Normal {
+    #char;
+    type = "Normal";
+    constructor(char) {
+        this.#char = char;
+    }
+    get char() {
+        return this.#char;
+    }
+}
+
+class Any {
+    type = "Any";
+    constructor() {}
+}
+
+class ZeroOrMore {
+    #regexp;
+    type = "ZeroOrMore";
+    constructor(regexp) {
+        this.#regexp = regexp;
+    }
+    get regexp() {
+        return this.#regexp;
+    }
+}
+
+class Or {
+    type = "Or";
+    constructor(left, right) {
+        this.left = left;
+        this.right = right;
+
+    }
+}
+class Str {
+    type = "Str";
+    constructor(regexpList){
+        this.regexpList = regexpList;
+    }
+}
 
 function isSpecialCharacter(char) {
-    return SPECIAL_CHARS.includes(char);
+    return "()|*.".includes(char);
 }
 
 function isInvalidSyntax(stack) {
-    return stack.length === 0 || stack[stack.length - 1].type === "Or";
+    const lastElement = stack[stack.length - 1];
+    return !stack.length || lastElement.type === "Or";
 }
 
-function parseSequence(str) {
-    let i = 0;
-    while (i < str.length && !isSpecialCharacter(str[i])) {
-        i++;
+function parseSequence(subStr) {
+
+   for (let specialIndex = 0; specialIndex < subStr.length; specialIndex++) {
+        if (isInvalidSyntax(specialIndex)) return subStr.slice(0, specialIndex);
+
     }
-    return str.substring(0, i);
 }
 
-function findMatchingClosingParenIndex(str, startIndex = 0) {
-    let parenCount = 1;
-    for (let i = startIndex + 1; i < str.length; i++) {
-        if (str[i] === "(") {
-            parenCount++;
-        } else if (str[i] === ")") {
-            parenCount--;
-            if (parenCount === 0) {
+function findMatchingClosingParenIndex(subStr, startIndex = 0) {
+    //console.log({subStr, startIndex});
+    let count = 1;
+    for (let i = startIndex; i < subStr.length; i++) {
+        if (subStr[i] === "(") {
+            count++;
+        } else if (subStr[i] === ")") {
+            //console.log({i});
+            count--;
+            //console.log({count});
+            if (count === 0) {
                 return i;
             }
         }
@@ -32,76 +75,71 @@ function findMatchingClosingParenIndex(str, startIndex = 0) {
     return null;
 }
 
-function parseRegExp(str) {
-    const stack = [];
-    let i = 0;
-    while (i < str.length) {
-        const char = str[i];
-        if (char === "(") {
-            const closingParenIndex = findMatchingClosingParenIndex(str, i);
+function parseRegExr(str) {
+    let currentIndex = 0;
+    function parse(subStr, stack = []) {
+        console.log(subStr);
+        if (subStr) return null;
+        const currentChar = subStr[0];
+
+        //console.log({subStr, index});
+        console.log({currentChar});
+        if (currentChar === "(") {
+            const closingParenIndex = findMatchingClosingParenIndex(subStr);
             if (closingParenIndex === null) {
-                return null; // Invalid syntax
+                return null;
             }
-            const subexpr = str.substring(i + 1, closingParenIndex);
-            stack.push(parseRegExp(subexpr));
-            i = closingParenIndex + 1;
-        } else if (char === OR_CHAR) {
-            if (isInvalidSyntax(stack)) {
-                return null; // Invalid syntax
+            console.log({closingParenIndex});
+            const subExp = parse(str.slice(currentIndex + 1, closingParenIndex));
+
+            if (isInvalidSyntax(subExp)) {
+                return null;
             }
-            const right = parseRegExp(str.substring(i + 1));
+            console.log("____________________________")
+            stack.push(new Str(subExp));
+            console.log(JSON.stringify(stack, null, 2));
+            return parse(str.slice(closingParenIndex + 1));
+        } else if (currentChar === "|") {
             const left = stack.pop();
-            stack.push(Or(left, right));
-            i = str.length; // Stop parsing; remaining string is for right-hand side
-        } else if (char === "*") {
-            if (stack.length === 0) {
-                return null; // Invalid syntax
+            console.log({left});
+            const right = parse(subStr.slice(1));
+            console.log({right});
+            if (isInvalidSyntax([left, right])) {
+                return null;
             }
-            const regexp = stack.pop();
-            stack.push(ZeroOrMore(regexp));
-            i++;
-        } else if (char === ".") {
-            stack.push(Any());
-            i++;
+            stack.push(new Or(left, right));
+            return parse(str.slice(subStr.length));
+        } else if (currentChar === "*") {
+            const prev = stack.pop();
+            if (!prev) {
+                return null;
+            }
+            stack.push(new ZeroOrMore(prev));
+            return parse(str.slice(subStr.length));
+        } else if (currentChar === ".") {
+            stack.push(new Any());
+            return parse(str.slice());
         } else {
-            const sequence = parseSequence(str.substring(i));
-            for (let j = 0; j < sequence.length; j++) {
-                stack.push(Normal(sequence[j]));
+            const sequence = parseSequence(subStr);
+            //console.log({sequence, endIndex});
+            const regexpList = [];
+            for (const char of sequence) {
+                regexpList.push(new Normal(char));
             }
-            i += sequence.length;
+            if (regexpList.length === 1) {
+                stack.push(new Str(regexpList[0]));
+            } else if (regexpList.length > 1) {
+                stack.push(new Str(regexpList));
+            }
+            return parse(subStr.slice(subStr.at(-1)));
         }
-    }
-    if (isInvalidSyntax(stack)) {
-        return null; // Invalid syntax
-    } else if (stack.length === 1) {
         return stack[0];
-    } else {
-        return Str(stack);
     }
 }
 
-function Normal(char) {
-    return { type: "Normal", char };
-}
 
-function Any() {
-    return { type: "any" };
-}
-
-function ZeroOrMore(regexp) {
-    return { type: "ZeroOrMore", regexp };
-}
-
-function Or(left, right) {
-    return { type: "Or", left, right };
-}
-
-function Str(regexpList) {
-    return { type: "Str", regexpList };
-}
-
-console.log(parseRegExp("a|b")); // {type: "Or", left: {type: "Normal", char: "a"}, right: {type: "Normal", char: "b"}}
-console.log(parseRegExp("(a)b|c")); // {type: "Or", left: {type: "Str", regexpList: [{type: "Normal", char: "a"}, {type: "Normal", char: "b"}]} , right: {type: "Normal", char: "c"}}
-console.log(parseRegExp("a*")); // {type: "ZeroOrMore", regexp: {type: "Normal", char: "a"}}
-console.log(parseRegExp(".")); // {type: "any"}
-console.log(parseRegExp("")); // null
+//console.log(parse("a|b")); // {type: "Or", left: {type: "Normal", char: "a"}, right: {type: "Normal", char: "b"}}
+console.log(parse("(a)b|c")); // {type: "Or", left: {type: "Str", regexpList: [{type: "Normal", char: "a"}, {type: "Normal", char: "b"}]} , right: {type: "Normal", char: "c"}}
+// console.log(parse("a*")); // {type: "ZeroOrMore", regexp: {type: "Normal", char: "a"}}
+// console.log(parse(".")); // {type: "any"}
+// console.log(parse("")); // null
